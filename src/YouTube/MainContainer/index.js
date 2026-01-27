@@ -1,27 +1,35 @@
-import React, { useRef, useState, useEffect, useCallback } from "react";
-import { CaretLeft, CaretRight } from "phosphor-react";
-import { selectTags, ytVideo } from "./data";
+import React, { useRef, useEffect, useCallback } from "react";
+import { ytVideo } from "./data";
 import { useDispatch, useSelector } from "react-redux";
-import { setSearchQuery, setSelectedCategory, resetFilters } from "../Slices/youTubeSlice";
-import { getYouTubeVideoAction, getVideoCategoriesAction } from "../actions/youTubeActions";
+import {
+  getYouTubeVideoAction,
+  getVideoCategoriesAction,
+} from "../actions/youTubeActions";
 
-import YouTubeVideoList, { YouTubeVideoListShimmer } from "../../components/YouTubeVideoList";
+import YouTubeVideoList, {
+  YouTubeVideoListShimmer,
+} from "../../components/YouTubeVideoList";
 
-const MainContainer = ({
-  youTubeVideoList,
-  isLoading,
-  channelDetails,
-}) => {
+const MainContainer = ({ youTubeVideoList, isLoading, channelDetails }) => {
   const dispatch = useDispatch();
-  const { nextPageToken, isFetchingMore } = useSelector((state) => state.youTubeState);
+  const { nextPageToken, isFetchingMore } = useSelector(
+    (state) => state.youTubeState,
+  );
   const gridContainerRef = useRef(null);
 
   const handleVerticalScroll = useCallback(() => {
     if (gridContainerRef.current) {
-      const { scrollTop, scrollHeight, clientHeight } = gridContainerRef.current;
+      const { scrollTop, scrollHeight, clientHeight } =
+        gridContainerRef.current;
       // If user reached within 100px of bottom and not currently fetching
-      if (scrollTop + clientHeight >= scrollHeight - 100 && !isFetchingMore && nextPageToken) {
-        dispatch((dispatch, getState) => getYouTubeVideoAction(dispatch, getState, true));
+      if (
+        scrollTop + clientHeight >= scrollHeight - 100 &&
+        !isFetchingMore &&
+        nextPageToken
+      ) {
+        dispatch((dispatch, getState) =>
+          getYouTubeVideoAction(dispatch, getState, true),
+        );
       }
     }
   }, [isFetchingMore, nextPageToken, dispatch]);
@@ -34,12 +42,12 @@ const MainContainer = ({
     // Grid scroll listener for infinite pagination
     const gridContainer = gridContainerRef.current;
     if (gridContainer) {
-      gridContainer.addEventListener('scroll', handleVerticalScroll);
+      gridContainer.addEventListener("scroll", handleVerticalScroll);
     }
-    
+
     return () => {
       if (gridContainer) {
-        gridContainer.removeEventListener('scroll', handleVerticalScroll);
+        gridContainer.removeEventListener("scroll", handleVerticalScroll);
       }
     };
   }, [gridContainerRef, isFetchingMore, nextPageToken, handleVerticalScroll]);
@@ -47,7 +55,7 @@ const MainContainer = ({
   return (
     <div className="bg-white dark:bg-gray-900 transition-all duration-300 ease-in-out h-full flex flex-col">
       {/* Video Grid */}
-      <div 
+      <div
         ref={gridContainerRef}
         className="px-2 sm:px-6 py-4 flex-1 overflow-y-auto custom-scrollbar scroll-smooth"
       >
@@ -65,14 +73,17 @@ const MainContainer = ({
             </>
           )}
         </div>
-        
-        {/* End of list message */}
-        {!nextPageToken && !isLoading && youTubeVideoList?.items?.length > 0 && (
-          <div className="flex justify-center py-8">
-            <span className="text-gray-500 text-sm italic">You've reached the end of the list</span>
-          </div>
-        )}
 
+        {/* End of list message */}
+        {!nextPageToken &&
+          !isLoading &&
+          youTubeVideoList?.items?.length > 0 && (
+            <div className="flex justify-center py-8">
+              <span className="text-gray-500 text-sm italic">
+                You've reached the end of the list
+              </span>
+            </div>
+          )}
       </div>
     </div>
   );

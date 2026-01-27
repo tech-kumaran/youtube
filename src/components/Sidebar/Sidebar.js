@@ -23,7 +23,6 @@ import {
 } from "phosphor-react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useSelector } from "react-redux";
-import Logo from "../../assets/logo";
 
 const Sidebar = ({ showSidebar, activeView, onViewChange, onClose, isOverlayMode }) => {
   const navigate = useNavigate();

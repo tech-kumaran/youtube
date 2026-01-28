@@ -75,6 +75,29 @@ import {
   getShortsSuccess,
   getExploreVideos,
   getExploreVideosSuccess,
+  setCurrentRegion,
+} from "../Slices/youTubeSlice";
+import { setUserRegion } from "../Slices/authSlice";
+import { getAuthToken, getUserEmail } from "../utils/authUtils";
+import { getUserRegion } from "../utils/locationUtils";
+import { 
+  getRecentlyWatched, 
+  addSearchQuery, 
+  getWatchHistory, 
+  getTopCategories,
+  addToWatchHistory as addToLog
+} from "../utils/watchHistoryUtils";
+import { 
+  getPersonalizedRecommendations,
+  getContextFromHistory 
+} from "../utils/recommendationEngine";
+import { 
+  setWatchHistory, 
+  addToWatchHistory as addToSlice, 
+  updateUserPreferences,
+  getRecommendedVideos,
+  getRecommendedVideosSuccess,
+  getTrendingVideosSuccess
 } from "../Slices/youTubeSlice";
 
 const API_KEY = "AIzaSyCngUiHFC-khbq0g4hiNddBgsRibC96GPw";
@@ -91,7 +114,10 @@ const ACTIVITIES_API_URL = "https://www.googleapis.com/youtube/v3/activities";
 const I18N_LANGUAGES_API_URL = "https://www.googleapis.com/youtube/v3/i18nLanguages";
 const I18N_REGIONS_API_URL = "https://www.googleapis.com/youtube/v3/i18nRegions";
 
+
+
 export const getVideoDetailsAction = (videoId) => async (dispatch) => {
+
   try {
     const response = await axios.get(VIDEOS_API_URL, {
       params: {
@@ -133,9 +159,14 @@ export const getVideoCommentsAction = (videoId) => async (dispatch) => {
   }
 };
 
-export const getRelatedVideosAction = (videoId, title) => async (dispatch) => {
+export const getRelatedVideosAction = (videoId, title) => async (dispatch, getState) => {
   try {
     dispatch(getRelatedVideos());
+    
+    // Get user's region from auth state
+    const { authState } = getState();
+    const userRegion = authState.userRegion || await getUserRegion();
+    
     const query = title?.split(" ").slice(0, 3).join(" ") || "Trending";
     
     const response = await axios.get(SEARCH_API_URL, {
@@ -145,7 +176,7 @@ export const getRelatedVideosAction = (videoId, title) => async (dispatch) => {
         maxResults: 50,
         q: query,
         key: API_KEY,
-        regionCode: "IN",
+        regionCode: userRegion,
       },
     });
     dispatch(getRelatedVideosSuccess(response));
@@ -154,12 +185,13 @@ export const getRelatedVideosAction = (videoId, title) => async (dispatch) => {
   }
 };
 
-export const getVideoCategoriesAction = () => async (dispatch) => {
+export const getVideoCategoriesAction = (regionCode) => async (dispatch) => {
+
   try {
     const response = await axios.get(CATEGORIES_API_URL, {
       params: {
         part: "snippet",
-        regionCode: "IN",
+        regionCode: regionCode || "IN",
         key: API_KEY,
       },
     });
@@ -171,8 +203,19 @@ export const getVideoCategoriesAction = () => async (dispatch) => {
 
 export const getYouTubeVideoAction = async (dispatch, getState, isPagination = false) => {
   try {
-    const { searchQuery, selectedCategory, nextPageToken } = getState().youTubeState;
+    const { 
+      searchQuery, 
+      selectedCategory, 
+      nextPageToken, 
+      currentRegion, 
+      isRecommendationsActive 
+    } = getState().youTubeState;
     
+    // If recommendation system is active and we are on Home (no search/category), use it
+    if (isRecommendationsActive && !searchQuery && selectedCategory === "all") {
+      return dispatch(fetchRecommendationsAction(isPagination));
+    }
+
     if (isPagination) {
       if (!nextPageToken) return;
       dispatch(getYouTubeVideosMore());
@@ -182,6 +225,12 @@ export const getYouTubeVideoAction = async (dispatch, getState, isPagination = f
 
     let response;
     const effectiveQuery = searchQuery; // Only use search query if explicitly typed
+    
+    // Determine region to use
+    const regionCode = currentRegion;
+    
+    // Determine category to use
+    const categoryToUse = selectedCategory;
 
     // Case 1: Text Search (Expensive: 100 units)
     if (effectiveQuery && effectiveQuery !== "") {
@@ -191,6 +240,7 @@ export const getYouTubeVideoAction = async (dispatch, getState, isPagination = f
         key: API_KEY,
         q: effectiveQuery,
         type: "video",
+        order: "relevance",
       };
 
       if (isPagination && nextPageToken) {
@@ -220,11 +270,11 @@ export const getYouTubeVideoAction = async (dispatch, getState, isPagination = f
         maxResults: 50,
         key: API_KEY,
         chart: "mostPopular",
-        regionCode: "IN",
+        regionCode: regionCode,
       };
 
-      if (selectedCategory && selectedCategory !== "All") {
-        popularParams.videoCategoryId = selectedCategory;
+      if (categoryToUse && categoryToUse !== "all") {
+        popularParams.videoCategoryId = categoryToUse;
         // YouTube API requirement: chart must be mostPopular when filtering by videoCategoryId
       }
 
@@ -406,9 +456,13 @@ export const getShortsAction = () => async (dispatch) => {
     console.error("Error fetching shorts:", error.message);
   }
 };
-export const getExploreVideosAction = (category) => async (dispatch) => {
+export const getExploreVideosAction = (category) => async (dispatch, getState) => {
   try {
     dispatch(getExploreVideos());
+    
+    // Get user's region from auth state or use detected region
+    const { authState } = getState();
+    const userRegion = authState.userRegion || await getUserRegion();
     
     let response;
     const categoryMapping = {
@@ -429,7 +483,7 @@ export const getExploreVideosAction = (category) => async (dispatch) => {
         params: {
           part: "snippet,contentDetails,statistics",
           chart: "mostPopular",
-          regionCode: "IN",
+          regionCode: userRegion,
           maxResults: 50,
           key: API_KEY,
           ...(categoryId ? { videoCategoryId: categoryId } : {})
@@ -444,7 +498,7 @@ export const getExploreVideosAction = (category) => async (dispatch) => {
           type: "video",
           maxResults: 50,
           key: API_KEY,
-          regionCode: "IN",
+          regionCode: userRegion,
           ...(category === "Live" ? { eventType: "live" } : {})
         },
       });
@@ -465,5 +519,201 @@ export const getExploreVideosAction = (category) => async (dispatch) => {
     console.error("Error fetching explore videos:", error.message);
   }
 };
+
+/**
+ * Initializes user's location and sets region in Redux state
+ * Call this on app initialization
+ */
+export const initializeUserLocationAction = () => async (dispatch) => {
+  try {
+    const regionCode = await getUserRegion();
+    console.log("User region detected:", regionCode);
+    
+    // Update both YouTube state and auth state
+    dispatch(setCurrentRegion(regionCode));
+    // If it's a new region, update currentRegion too
+    dispatch(setCurrentRegion(regionCode));
+    dispatch(setUserRegion(regionCode));
+    
+    // FETCH CATEGORIES FOR THE DETECTED REGION
+    dispatch(getVideoCategoriesAction(regionCode));
+    
+    return regionCode;
+  } catch (error) {
+    console.error("Error initializing user location:", error);
+    // Use default region on error
+    dispatch(setCurrentRegion("US"));
+    dispatch(setUserRegion("US"));
+    dispatch(getVideoCategoriesAction("US"));
+    return "US";
+  }
+};
+
+/**
+ * Fetches videos personalized for the authenticated user
+ * Uses user's region and authentication token
+ */
+export const getUserVideosAction = async (dispatch, getState) => {
+  try {
+    dispatch(getYouTubeVideos());
+    
+    const { authState } = getState();
+    const userEmail = getUserEmail();
+    const authToken = getAuthToken();
+    const userRegion = authState.userRegion || await getUserRegion();
+    
+    console.log("Fetching videos for user:", userEmail || "Guest");
+    console.log("Using region:", userRegion);
+    console.log("Authenticated:", !!authToken);
+    
+    // Fetch popular videos for user's region
+    const response = await axios.get(VIDEOS_API_URL, {
+      params: {
+        part: "snippet,contentDetails,statistics,topicDetails,status,recordingDetails,player",
+        maxResults: 50,
+        key: API_KEY,
+        chart: "mostPopular",
+        regionCode: userRegion,
+      },
+      // If user is authenticated, include token in headers
+      ...(authToken ? {
+        headers: {
+          'Authorization': `Bearer ${authToken}`,
+        }
+      } : {})
+    });
+    
+    const channelIds = response.data.items.map(
+      (item) => item.snippet.channelId
+    );
+
+    const fetchChannelDetails = async (channelIds, dispatch) => {
+      if (!channelIds.length) return;
+      try {
+        const channelResponse = await axios.get(CHANNEL_API_URL, {
+          params: {
+            part: "snippet,statistics",
+            key: API_KEY,
+            id: channelIds.join(","),
+          },
+        });
+        dispatch(getYouTubeChannelsSuccess(channelResponse));
+      } catch (error) {
+        console.error("Error fetching channel details:", error.message);
+        throw error;
+      }
+    };
+
+    await fetchChannelDetails(channelIds, dispatch);
+    dispatch(getYouTubeVideosSuccess({ data: response.data, isPagination: false }));
+  } catch (error) {
+    console.error("Error fetching user videos:", error);
+    dispatch(getYouTubeVideosFail(error.message));
+  }
+};
+
+/**
+ * Tracks video playback and updates history
+ * @param {Object} video - Video object being watched
+ * @param {number} watchTime - Time in seconds spent on the video
+ */
+export const trackPlaybackAction = (video, watchTime = 0) => (dispatch) => {
+  try {
+    // 1. Update local storage log
+    addToLog(video, watchTime);
+    
+    // 2. Update Redux slice
+    dispatch(addToSlice({
+      videoId: video.id,
+      title: video.snippet?.title,
+      timestamp: new Date().toISOString()
+    }));
+    
+    // 3. Update user preferences based on category
+    const topCategories = getTopCategories(5);
+    dispatch(updateUserPreferences({ topCategories }));
+  } catch (error) {
+    console.error("Error tracking playback:", error);
+  }
+};
+
+/**
+ * Tracks search query in history
+ * @param {string} query - Search term
+ */
+export const trackSearchAction = (query) => (dispatch) => {
+  try {
+    addSearchQuery(query);
+    dispatch(updateUserPreferences({ 
+      recentSearches: [query, ...getRecentlyWatched(5).map(v => v.query)].slice(0, 10) 
+    }));
+  } catch (error) {
+    console.error("Error tracking search:", error);
+  }
+};
+
+/**
+ * Fetches and generates personalized video recommendations
+ */
+export const fetchRecommendationsAction = (isPagination = false) => async (dispatch, getState) => {
+  try {
+    dispatch(getRecommendedVideos({ isPagination }));
+    
+    const { authState, youTubeState } = getState();
+    const userRegion = authState.userRegion || "US";
+    const context = getContextFromHistory();
+    context.userRegion = userRegion;
+    const { recommendedNextPageToken } = youTubeState;
+
+    // Step 1: Fetch trending videos as a base
+    const params = {
+      part: "snippet,contentDetails,statistics",
+      chart: "mostPopular",
+      regionCode: userRegion,
+      maxResults: 50,
+      key: API_KEY,
+    };
+
+    if (isPagination && recommendedNextPageToken) {
+      params.pageToken = recommendedNextPageToken;
+    }
+
+    const response = await axios.get(VIDEOS_API_URL, { params });
+
+    // Step 2: Use recommendation engine to score and sort
+    const personalized = getPersonalizedRecommendations(response.data.items, context);
+    
+    dispatch(getRecommendedVideosSuccess({ 
+      data: { 
+        items: personalized,
+        nextPageToken: response.data.nextPageToken 
+      },
+      isPagination
+    }));
+    
+    // Also update trending cache if not pagination
+    if (!isPagination) {
+      dispatch(getTrendingVideosSuccess({ data: { items: response.data.items } }));
+    }
+  } catch (error) {
+    console.error("Error fetching recommendations:", error);
+  }
+};
+
+/**
+ * Initializes history from local storage on app load
+ */
+export const initializeHistoryAction = () => (dispatch) => {
+  try {
+    const history = getWatchHistory();
+    dispatch(setWatchHistory(history));
+    
+    const topCategories = getTopCategories(5);
+    dispatch(updateUserPreferences({ topCategories }));
+  } catch (error) {
+    console.error("Error initializing history:", error);
+  }
+};
+
 
 

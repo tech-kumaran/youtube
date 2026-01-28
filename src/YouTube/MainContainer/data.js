@@ -1,5 +1,5 @@
 export const selectTags = [
-  { id: 1, label: "Recommended", categoryId: "All" },
+  { id: 1, label: "All", categoryId: "all" },
   { id: 2, label: "Music", categoryId: "10" },
   { id: 3, label: "Gaming", categoryId: "20" },
   { id: 4, label: "Sports", categoryId: "17" },

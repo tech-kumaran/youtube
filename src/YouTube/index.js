@@ -5,6 +5,7 @@ import MainContainer from "./MainContainer";
 import { useDispatch, useSelector } from "react-redux";
 import { useLocation } from "react-router-dom";
 import { getYouTubeVideoAction } from "./actions/youTubeActions";
+import { initializeAuthAction } from "./actions/authActions";
 import CategoryNav from "../components/CategoryNav";
 
 // Lazy load components for performance
@@ -39,14 +40,34 @@ const YouTubeApp = () => {
     }
   }, [location.state]);
 
+  useEffect(() => {
+    // Initial app initialization
+    dispatch(initializeAuthAction());
+  }, [dispatch]);
+
   const {
     loading,
+    recommendationLoading,
     videos: { items },
+    recommendedVideos,
+    isRecommendationsActive,
     channelDetails,
   } = useSelector((state) => state.youTubeState);
 
+  // Consolidate loading states
+  const isAnyLoading = loading || recommendationLoading;
+
+  // Use recommended videos for Home feed if recommendations are active, otherwise fallback to standard videos
+  const homeVideos = (activeView === "Home" && isRecommendationsActive && recommendedVideos?.items?.length > 0) 
+    ? recommendedVideos.items 
+    : items;
+
   useEffect(() => {
     if (activeView === "Home") {
+      // If we're on Home, ensure we have initial content
+      // The initializeAuthAction already fetches recommendations, 
+      // which we can use for the Home feed if we want.
+      // For now, let's keep the getYouTubeVideoAction call if it's the primary feed.
       dispatch(getYouTubeVideoAction);
     }
   }, [dispatch, activeView]);
@@ -120,8 +141,8 @@ const YouTubeApp = () => {
         return (
           <MainContainer
             showSidebar={showSidebar}
-            isLoading={loading}
-            youTubeVideoList={items}
+            isLoading={isAnyLoading}
+            youTubeVideoList={{ items: homeVideos }}
             channelDetails={channelDetails}
           />
         );

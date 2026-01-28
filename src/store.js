@@ -1,12 +1,12 @@
 import { combineReducers, configureStore } from "@reduxjs/toolkit";
 import thunk from "redux-thunk";
 
-import youTubeReducer from "./YouTube/Slices/youTubeSlice"; // Import your user reducer
-// Import other reducers as needed
+import youTubeReducer from "./YouTube/Slices/youTubeSlice";
+import authReducer from "./YouTube/Slices/authSlice";
 
 const reducers = combineReducers({
   youTubeState: youTubeReducer,
-  // Add other reducers here
+  authState: authReducer,
 });
 
 const store = configureStore({

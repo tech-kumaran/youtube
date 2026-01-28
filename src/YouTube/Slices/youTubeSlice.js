@@ -7,8 +7,10 @@ const initialState = {
   nextPageToken: null,
   videoCategories: [],
   searchQuery: "",
-  selectedCategory: "All",
+  selectedCategory: "all",
   order: "relevance",
+  currentRegion: "IN",
+  randomCategory: null,
   currentVideoDetails: null,
   videoComments: [],
   relatedVideos: { items: [] },
@@ -24,6 +26,18 @@ const initialState = {
   shorts: { items: [] },
   exploreVideos: { items: [] },
   isFetchingExplore: false,
+  // Recommendation system
+  recommendedVideos: { items: [] },
+  recommendedNextPageToken: null,
+  isRecommendationsActive: false,
+  recommendationLoading: false,
+  isFetchingMoreRecommendations: false,
+  trendingVideos: { items: [] },
+  watchHistory: [],
+  userPreferences: {
+    topCategories: [],
+    recentSearches: [],
+  },
   isDarkMode: localStorage.getItem("isDarkMode") !== null 
     ? JSON.parse(localStorage.getItem("isDarkMode")) 
     : true, // Default to Dark Mode
@@ -82,15 +96,25 @@ const YouTubeSlice = createSlice({
       };
     },
     setSearchQuery(state, action) {
-      return {
-        ...state,
-        searchQuery: action.payload,
-      };
+      state.searchQuery = action.payload;
+      // Disable recommendations if searching, enable if search cleared and "All" category
+      state.isRecommendationsActive = (action.payload === "" && state.selectedCategory === "all");
     },
     setSelectedCategory(state, action) {
+      state.selectedCategory = action.payload;
+      // Enable recommendations only if "all" is selected and no search query active
+      state.isRecommendationsActive = (action.payload === "all" && state.searchQuery === "");
+    },
+    setCurrentRegion(state, action) {
       return {
         ...state,
-        selectedCategory: action.payload,
+        currentRegion: action.payload,
+      };
+    },
+    setRandomCategory(state, action) {
+      return {
+        ...state,
+        randomCategory: action.payload,
       };
     },
     getVideoDetailsSuccess(state, action) {
@@ -153,8 +177,10 @@ const YouTubeSlice = createSlice({
       return {
         ...state,
         searchQuery: "",
-        selectedCategory: "All",
+        selectedCategory: "all",
         nextPageToken: null,
+        randomCategory: null,
+        isRecommendationsActive: true, // Reset should enable recommendations
       };
     },
     toggleTheme(state) {
@@ -163,6 +189,46 @@ const YouTubeSlice = createSlice({
       return {
         ...state,
         isDarkMode: newDarkMode,
+      };
+    },
+    // Recommendation actions
+    getRecommendedVideos(state, action) {
+      if (action.payload?.isPagination) {
+        state.isFetchingMoreRecommendations = true;
+      } else {
+        state.recommendationLoading = true;
+        state.isRecommendationsActive = true;
+      }
+    },
+    getRecommendedVideosSuccess(state, action) {
+      const isPagination = action.payload.isPagination;
+      const newItems = action.payload.data.items;
+      
+      state.recommendationLoading = false;
+      state.isFetchingMoreRecommendations = false;
+      state.recommendedVideos = {
+        ...action.payload.data,
+        items: isPagination 
+          ? [...state.recommendedVideos.items, ...newItems]
+          : newItems
+      };
+      state.recommendedNextPageToken = action.payload.data.nextPageToken || null;
+    },
+    getTrendingVideosSuccess(state, action) {
+      state.trendingVideos = action.payload.data;
+    },
+    setWatchHistory(state, action) {
+      state.watchHistory = action.payload;
+    },
+    addToWatchHistory(state, action) {
+      // Add to beginning, limit to 100
+      const updated = [action.payload, ...state.watchHistory];
+      state.watchHistory = updated.slice(0, 100);
+    },
+    updateUserPreferences(state, action) {
+      state.userPreferences = {
+        ...state.userPreferences,
+        ...action.payload,
       };
     },
   },
@@ -179,6 +245,8 @@ export const {
   getYouTubeCategoriesSuccess,
   setSearchQuery,
   setSelectedCategory,
+  setCurrentRegion,
+  setRandomCategory,
   resetFilters,
   getVideoDetailsSuccess,
   getVideoCommentsSuccess,
@@ -195,6 +263,13 @@ export const {
   getExploreVideos,
   getExploreVideosSuccess,
   toggleTheme,
+  // Recommendation actions
+  getRecommendedVideos,
+  getRecommendedVideosSuccess,
+  getTrendingVideosSuccess,
+  setWatchHistory,
+  addToWatchHistory,
+  updateUserPreferences,
 } = actions;
 
 export default reducer;

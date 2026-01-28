@@ -14,12 +14,20 @@ const CategoryNav = ({ onCategoryClick }) => {
   const [showRightButton, setShowRightButton] = useState(true);
 
   const handleTagClick = (tag) => {
+    // Check if category is already active to avoid redundant calls
+    const isRecommendedTag = tag.categoryId === "all";
+    const isActive = isRecommendedTag 
+      ? (selectedCategory === "all" && searchQuery === "")
+      : (tag.categoryId ? tag.categoryId === selectedCategory : tag.label === searchQuery);
+
+    if (isActive) return;
+
     if (tag.categoryId) {
       dispatch(setSearchQuery(""));
       dispatch(setSelectedCategory(tag.categoryId));
     } else {
       dispatch(setSearchQuery(tag.label));
-      dispatch(setSelectedCategory("All"));
+      dispatch(setSelectedCategory("all"));
     }
     
     // Trigger video fetch
@@ -89,18 +97,18 @@ const CategoryNav = ({ onCategoryClick }) => {
             style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
           >
             <div className="flex gap-2 sm:gap-3 min-w-max">
-              {(videoCategories?.length > 0 ? [{ id: "all", snippet: { title: "Recommended" } }, ...videoCategories] : selectTags).map((category, index) => {
+              {(videoCategories?.length > 0 ? [{ id: "all", snippet: { title: "All" } }, ...videoCategories] : selectTags).map((category, index) => {
                 const label = category.snippet?.title || category.label;
                 const isApiCategory = !!category.snippet;
                 const tagObj = isApiCategory ? {
                   label: label,
-                  categoryId: category.id === "all" ? "All" : category.id
+                  categoryId: category.id === "all" ? "all" : category.id
                 } : category;
 
                 const isActive = 
-                  (tagObj.categoryId && tagObj.categoryId === selectedCategory) || 
+                  (tagObj.categoryId && tagObj.categoryId === selectedCategory && (selectedCategory !== "all" || searchQuery === "")) || 
                   (!tagObj.categoryId && tagObj.label === searchQuery) ||
-                  (selectedCategory === "All" && tagObj.categoryId === "All" && searchQuery === "");
+                  (selectedCategory === "all" && tagObj.categoryId === "all" && searchQuery === "");
 
                 return (
                   <div

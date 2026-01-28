@@ -10,7 +10,8 @@ import Navbar from "../../components/Header/Navbar";
 import { 
   getVideoDetailsAction, 
   getVideoCommentsAction, 
-  getRelatedVideosAction 
+  getRelatedVideosAction,
+  trackPlaybackAction
 } from "../actions/youTubeActions";
 
 const YouTubeVideo = () => {
@@ -22,6 +23,12 @@ const YouTubeVideo = () => {
   const onSelectPlayVideo = (id) => {
     const url = `watch?v=${id}`;
     window.location.href = url;
+  };
+  
+  const onPlayerPlay = (event) => {
+    if (currentVideoDetails) {
+      dispatch(trackPlaybackAction(currentVideoDetails));
+    }
   };
 
   const opts = {
@@ -92,6 +99,7 @@ const YouTubeVideo = () => {
           <div className="relative aspect-video rounded-xl overflow-hidden bg-black ring-1 ring-gray-200 dark:ring-white/10 shadow-2xl">
             <YouTube 
               videoId={videoId} 
+              onPlay={onPlayerPlay}
               opts={{
                 ...opts,
                 height: "100%",

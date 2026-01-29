@@ -69,9 +69,9 @@ const MainContainer = ({ youTubeVideoList, isLoading, channelDetails }) => {
       {/* Video Grid */}
       <div
         ref={gridContainerRef}
-        className="px-2 sm:px-6 py-4 flex-1 overflow-y-auto custom-scrollbar scroll-smooth"
+        className="px-0 sm:px-4 md:px-6 py-4 flex-1 overflow-y-auto custom-scrollbar scroll-smooth"
       >
-        <div className="grid gap-y-8 gap-x-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3 2xl:grid-cols-3 mb-8">
+        <div className="grid gap-y-8 gap-x-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-3 mb-8">
           {effectiveIsLoading && !youTubeVideoList?.items?.length ? (
             <YouTubeVideoListShimmer count={8} />
           ) : (

@@ -1,5 +1,7 @@
 import React, { useState } from "react";
 import { 
+  List,
+  X,
   House,
   PlayCircle,
   YoutubeLogo,
@@ -204,7 +206,7 @@ const Sidebar = ({ showSidebar, activeView, onViewChange, onClose, isOverlayMode
       } ${
         showSidebar ? "translate-x-0" : "-translate-x-full"
       } custom-scrollbar overflow-y-auto border-r border-gray-200 dark:border-gray-800`}>
-        <div className="flex items-center p-4 border-b border-gray-200 dark:border-gray-800 mb-2">
+        <div className="flex items-center justify-between px-4 h-14 border-b border-gray-200 dark:border-gray-800 mb-2">
             <svg height="24" viewBox="0 0 95 20" fill="currentColor" className="text-black dark:text-white" xmlns="http://www.w3.org/2000/svg">
               {/* YouTube Icon */}
               <g>
@@ -222,6 +224,12 @@ const Sidebar = ({ showSidebar, activeView, onViewChange, onClose, isOverlayMode
                 <path d="M52.3 19.34C52.12 19.53 51.98 19.63 51.75 19.63C51.52 19.63 51.34 19.54 51.22 19.34C51.1 19.14 51.04 18.8 51.04 18.32V14.94C51.04 14.47 51.1 14.15 51.21 13.95C51.32 13.76 51.5 13.66 51.74 13.66C51.98 13.66 52.17 13.76 52.28 13.96C52.39 14.16 52.45 14.48 52.45 14.94V18.32C52.45 18.81 52.4 19.14 52.3 19.34ZM54.76 16.59C54.76 15.7 54.73 14.99 54.67 14.46C54.54 13.36 54.01 12.81 53.07 12.81C52.56 12.81 52.12 13 51.74 13.38L51.66 12.98H49.56V21.36H51.66V20.84H51.74C52.1 21.24 52.53 21.44 53.05 21.44C54.02 21.44 54.55 20.89 54.66 19.78C54.72 19.19 54.76 18.25 54.76 16.94V16.59Z" fill="currentColor"/>
               </g>
             </svg>
+            <div
+              className="hover:bg-gray-200 dark:hover:bg-gray-600 w-10 h-10 rounded-full flex items-center justify-center cursor-pointer transition-colors"
+              onClick={() => onClose && onClose()}
+            >
+              <X className="text-black dark:text-white" size={24} weight="bold" />
+            </div>
         </div>
         <SidebarSection items={youTubeTopSection} />
         <SidebarSection items={youTubeTopSectionSecond} />

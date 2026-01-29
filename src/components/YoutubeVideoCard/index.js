@@ -95,7 +95,7 @@ const YoutubeVideoCard = ({ video, channelDetails }) => {
 
   return (
     <div
-      className="card flex flex-col gap-2 cursor-pointer bg-transparent hover:bg-gray-100 dark:hover:bg-gray-800/50 rounded-xl p-2 -m-2"
+      className="card flex flex-col gap-2 cursor-pointer bg-transparent hover:bg-gray-100 dark:hover:bg-gray-800/50 rounded-xl p-0 sm:p-2 sm:-m-2"
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
     >

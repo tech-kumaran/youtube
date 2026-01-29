@@ -161,7 +161,7 @@ const YouTubeApp = () => {
         />
         <div className={`flex-1 flex flex-col overflow-hidden transition-all duration-300 ${
           showSidebar ? "md:pl-[72px]" : "md:pl-[240px]"
-        }`}>
+        } pl-0`}>
           <CategoryNav onCategoryClick={handleCategoryClick} />
           <div className="flex-1 overflow-hidden">
             {renderContent()}
